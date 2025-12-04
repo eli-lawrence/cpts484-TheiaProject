@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Companion Settings</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+    }
+    .card {
+      background: #222;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    }
+    h1 { text-align: center; }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #111;
+      color: #fff;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      margin-top: 1.5rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #2d8cff;
+      color: #fff;
+      width: 100%;
+    }
+    a { color: #2d8cff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Companion Settings</h1>
+    <p style="text-align:center;">
+      <a href="{{ url_for('index') }}">Back</a>
+    </p>
+
+    <form method="post">
+      <label for="emergency_contact_name">Emergency Contact Name</label>
+      <input id="emergency_contact_name" name="emergency_contact_name"
+             value="{{ settings_data['emergency_contact_name'] }}">
+
+      <label for="emergency_contact_phone">Emergency Contact Phone</label>
+      <input id="emergency_contact_phone" name="emergency_contact_phone"
+             value="{{ settings_data['emergency_contact_phone'] }}">
+
+      <label for="language">Language</label>
+      <select id="language" name="language">
+        <option value="en-US" {% if settings_data['language']=="en-US" %}selected{% endif %}>English (US)</option>
+        <option value="en-GB" {% if settings_data['language']=="en-GB" %}selected{% endif %}>English (UK)</option>
+      </select>
+
+      <label for="preferred_voice">Preferred Voice</label>
+      <input id="preferred_voice" name="preferred_voice"
+             value="{{ settings_data['preferred_voice'] }}">
+
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </div>
+</body>
+</html>
