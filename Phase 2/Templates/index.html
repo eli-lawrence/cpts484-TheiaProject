@@ -74,17 +74,15 @@
       </p>
 
       <div class="card">
-        <h2>Start Navigation</h2>
-        <p>Click to start navigating to your destination:</p>
+        <h2>Voice Command</h2>
         <button class="btn btn-primary" onclick="startNav()">
-          Start Navigation
+          Start Voice Command
         </button>
         <div id="status" class="status" aria-live="polite"></div>
       </div>
 
       <div class="card">
         <h2>Manual Movement</h2>
-        <p>Press a button to indicate the direction you moved:</p>
 
         <div
           style="
@@ -157,120 +155,281 @@
     </div>
 
     <script>
-      function speak(text) {
-        if (!("speechSynthesis" in window)) {
-          return;
-        }
+        const emergencyContactName = "{{ settings_data['emergency_contact_name'] }}";
+        const emergencyContactPhone = "{{ settings_data['emergency_contact_phone'] }}";
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "{{ settings_data['language'] }}";
-        window.speechSynthesis.speak(utterance);
+      // Function to synthesize speech from text
+      // Returns a Promise that resolves when the speech finishes
+      function speak(text) {
+        return new Promise((resolve) => {
+          // Check if the browser supports the Web Speech API
+          if (!("speechSynthesis" in window)) {
+            console.warn("Speech Synthesis not supported in this browser.");
+            resolve(); // Resolve immediately if not supported
+            return;
+          }
+
+          // Create a new SpeechSynthesisUtterance object
+          const utterance = new SpeechSynthesisUtterance(text);
+          // Set the language for the utterance based on user settings
+          utterance.lang = "{{ settings_data['language'] }}";
+
+          // Resolve the promise when speaking finishes
+          utterance.onend = () => {
+            resolve();
+          };
+
+          // Handle errors (also resolve to avoid hanging)
+          utterance.onerror = (err) => {
+            console.error("Speech synthesis error:", err);
+            resolve();
+          };
+
+          // Speak the utterance
+          window.speechSynthesis.speak(utterance);
+        });
       }
 
-      let fallActive = false;
-      let countdownTimer = null;
-      let secondsLeft = 0;
+      // ----------------------- Global State Variables -----------------------------
 
+      let fallActive = false; // flag if fall detection is active
+      let countdownTimer = null; // interval ID for the fall detection countdown timer
+      let secondsLeft = 0; // remaining seconds for the fall detection countdown
+
+      
+      let navPath = []; // current navigation path - list of nodes
+      let instructions = []; // instructions for the current route
+      let routeIndex = 0; // tracks current index in the navigation instructions
+
+      // Updates the text content of the status display area on the page
       function setStatus(text) {
         document.getElementById("status").textContent = text;
       }
 
+      // Updates the text content of the countdown display area on the page
       function setCountdown(text) {
         document.getElementById("countdown").textContent = text || "";
       }
 
+      // Initiates voice listening during fall detection until fall detection is complete
+      async function listenDuringFall() {
+        if (!fallActive) return; // exit if fall detection is not active
+        try {
+          const transcript = await startVoiceInput();
+          await handleVoiceCommand(transcript); // process command
+        }
+        catch (err) {}
+        if (fallActive) { // if fall detection is still active
+          listenDuringFall();
+        }
+      }
+
+      // Initiates the fall detection simulation sequence
       function startFallDetection() {
+        // Prevent starting fall detection if it's already active
         if (fallActive) {
           return;
         }
 
-        fallActive = true;
-        secondsLeft = 10;
+        fallActive = true; // Set fall detection to active
+        secondsLeft = 20; // Initialize countdown timer to 20 seconds
 
-        showDuringCountdownButtons();
-        setStatus("I detected a possible fall. Are you okay?");
-        setCountdown("Respond within: " + secondsLeft + " s");
+        showDuringCountdownButtons(); // Show appropriate buttons for the countdown phase
+        setStatus("I detected a possible fall. Are you okay?"); // Update status message
+        setCountdown("Respond within: " + secondsLeft + " s"); // Display countdown
 
-        speak("I detected a fall. Are you okay?");
+        // Announce fall detection via speech and wait for it to finish
+        // This is CRITICAL: waiting prevents the app from hearing its own "Are you OK?" prompt
+        // and falsely triggering the "OK" response.
+        speak("I detected a fall. Are you okay?").then(() => {
+           listenDuringFall();
+        });
 
+        // Clear any existing countdown timer to prevent duplicates
         if (countdownTimer) {
           clearInterval(countdownTimer);
         }
 
+        // new countdown timer that updates every second
         countdownTimer = setInterval(function () {
-          secondsLeft--;
+          secondsLeft--; // Decrement seconds
 
-          if (secondsLeft <= 0) {
-            clearInterval(countdownTimer);
-            triggerEmergencyContact();
+          if (secondsLeft <= 0) { // if time is up
+            clearInterval(countdownTimer); // stop timer
+            triggerEmergencyContact(); // call emergency contact
           } else {
-            setCountdown("Respond within: " + secondsLeft + " s");
+            setCountdown("Respond within: " + secondsLeft + " s"); // update display
           }
-        }, 1000);
+        }, 1000); // update every second
       }
 
+      // shows "I'm OK" button during fall detection
       function showDuringCountdownButtons() {
         document.getElementById("okButton").style.display = "block";
         document.getElementById("okAfterCallButton").style.display = "none";
       }
 
+      // shows "Person is OK Now" button after emergency contact was triggered
       function showAfterCallButtons() {
         document.getElementById("okButton").style.display = "none";
         document.getElementById("okAfterCallButton").style.display = "block";
       }
 
+      // hides fall detection related buttons
       function resetButtons() {
         document.getElementById("okButton").style.display = "none";
         document.getElementById("okAfterCallButton").style.display = "none";
       }
 
+      // marks user is okay
       function markUserOkay() {
-        fallActive = false;
+        fallActive = false; // deactivate fall detection
 
+        // stop countdown timer if running
         if (countdownTimer) {
           clearInterval(countdownTimer);
         }
 
+        //reset buttons and displays
         setCountdown("");
         resetButtons();
         setStatus("User marked OK.");
         speak("Okay, thank you.");
       }
 
+      // emergency contact sequence
       function triggerEmergencyContact() {
-        setCountdown("");
-        showAfterCallButtons();
-        setStatus("No response detected. Calling emergency contact.");
-        speak("No response detected. Calling your emergency contact.");
+        setCountdown(""); // clear countdown display
+        showAfterCallButtons(); // show button for resetting after call
+        const msg = "No response detected. Calling your emergency contact, " + emergencyContactName + " at " + emergencyContactPhone + ".";
+
+        setStatus(msg); // update status
+        speak(msg); // Announce emergency call
       }
 
+      // Resets the application state after an emergency contact has been (simulated) called
       function resetAfterCall() {
-        fallActive = false;
-        setStatus("Status cleared.");
-        setCountdown("");
-        resetButtons();
+        fallActive = false; // Deactivate fall detection
+        setStatus("Status cleared."); // Clear status message
+        setCountdown(""); // Clear countdown display
+        resetButtons(); // Hide all fall detection buttons
       }
 
-      let navPath = [];
-      let instructions = [];
-      let routeIndex = 0;
+      // Initiates the general voice command listening for navigation or other commands
+      // Stores the current index in the navigation instructions array
 
-      async function startNav(placeToGo) {
-        let destination = await startVoiceInput();
+      async function startNav() {
+        setStatus("Listening for a voice command..."); // Update UI status
+        await speak("Listening"); // Wait for speech to finish to avoid self-triggering
 
+        try {
+          const transcript = await startVoiceInput(); // Capture voice input
+          handleVoiceCommand(transcript); // Process the command
+        } catch (err) {
+          console.error(err); // Log any errors during voice input
+          setStatus("Sorry, I couldn't understand you. Please try again."); // Inform user
+        }
+      }
+
+      // Normalizes a given text command for easier processing (lowercase, trim whitespace)
+      function normalizeCommand(text) {
+        return text.toLowerCase().trim();
+      }
+
+      // Processes a transcribed voice command to execute specific actions
+      async function handleVoiceCommand(rawTranscript) {
+        const cmd = normalizeCommand(rawTranscript); // Normalize the raw transcript
+        console.log("Heard command:", cmd); // Log the heard command for debugging
+
+        // Use a switch statement to handle different voice commands
+        switch (true) {
+          // Command to open settings page
+          case cmd.includes("open settings"):
+            setStatus("Opening settings...");
+            speak("Opening settings.");
+            window.location.href = "{{ url_for('settings') }}"; // Redirect to settings page
+            return;
+
+          // Commands to manually trigger fall detection
+          case cmd.includes("help ive fallen") ||
+            cmd.includes("help i have fallen") ||
+            cmd.includes("help") ||
+            cmd.includes("fallen"):
+            setStatus("Fall detected by voice command.");
+            startFallDetection(); // Start the fall detection sequence
+            return;
+
+          // Commands to indicate the user is okay during fall detection
+          // Uses regex with word boundaries and excludes negative phrases to prevent false positives
+          case (/\b(yes|ok|okay)\b/.test(cmd) && !cmd.includes("not okay") && !cmd.includes("not ok")):
+            if (fallActive) {
+              setStatus("User said they are okay.");
+              markUserOkay(); // Mark user as okay and clear fall state
+            } else {
+              // If no active fall, acknowledge the command but inform user
+              setStatus(
+                "I heard 'yes I'm okay', but no active fall was detected."
+              );
+              speak("Okay, thank you.");
+            }
+            return;
+
+          // Command to navigate to a specific room (e.g., "Room 103")
+          case cmd.startsWith("room"): {
+            let dest = "Room " + cmd.replace(/^room\s+/, "").trim(); // Extract room number
+            await navigateToDestination(dest); // Initiate navigation to the extracted destination
+            return;
+          }
+
+          case cmd.startsWith("hallway"): {
+            const numberWords = {
+              "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+              "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
+            };
+            let hallwayIdentifier = cmd.replace(/^hallway\s+/, "").trim();
+
+            // Convert spelled-out numbers to digits if necessary
+            if (numberWords[hallwayIdentifier]) {
+              hallwayIdentifier = numberWords[hallwayIdentifier];
+            }
+            let dest = "Hallway " + hallwayIdentifier;
+            await navigateToDestination(dest);
+            return;
+          }
+
+          // ----- FALLBACK -----
+          // If no specific command is matched, treat the transcript as a navigation destination
+          default:
+            await navigateToDestination(rawTranscript);
+            return;
+        }
+      }
+
+      // Handles the navigation process to a specified destination
+      async function navigateToDestination(destination1) {
+        let destination = normalizeCommand(destination1); // Normalize the destination input
+
+        // Capitalize the first letter of the destination for consistent naming (e.g., "room 103" -> "Room 103")
         destination =
           destination.charAt(0).toUpperCase() + destination.slice(1);
 
         try {
+          // Send the transcribed destination to the backend for logging (speechtotext endpoint)
+          await fetch(
+            `/speechtotext?transcript=${encodeURIComponent(destination)}`
+          );
+
+          // Request navigation instructions from the backend (navigate endpoint)
           const response = await fetch(
             `/navigate?destination=${encodeURIComponent(destination)}`
           );
-          const data = await response.json();
+          const data = await response.json(); // Parse the JSON response
 
-          navigationPath = data.route;
-          instructions = data.instructions;
-          routeIndex = 0;
+          navPath = data.route; // Store the full navigation path
+          instructions = data.instructions; // Store the voice instructions
+          routeIndex = 0; // Reset instruction index
 
+          // Speak the first instruction or indicate no instructions are available
           if (instructions.length > 0) {
             speak(instructions[0]);
             setStatus(`Next step: ${instructions[0]}`);
@@ -278,11 +437,12 @@
             setStatus("No instructions available.");
           }
         } catch (err) {
-          console.error(err);
-          setStatus("Error fetching navigation.");
+          console.error(err); // Log any errors during navigation
+          setStatus("Error fetching navigation."); // Inform user of error
         }
       }
 
+      // Captures voice input using the Web Speech API
       async function startVoiceInput() {
         return new Promise((resolve, reject) => {
           const recognition = new webkitSpeechRecognition();
@@ -291,42 +451,52 @@
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
 
-          recognition.onresult = (event) => {
+          recognition.onresult = async (event) => {
             const transcript = event.results[0][0].transcript;
+
+            await fetch(
+              `/speechtotext?transcript=${encodeURIComponent(transcript)}`
+            );
+
             resolve(transcript);
           };
 
-          recognition.onerror = (err) => {
-            reject(err);
-          };
+          recognition.onerror = (err) => reject(err);
 
           recognition.start();
         });
       }
 
+      // Handles manual movement actions (forward, back, left, right)
       async function move(direction) {
+        setStatus(`Moving ${direction}...`); // Update status message
+        // Send movement direction to the backend (move endpoint)
         const response = await fetch(`/move?direction=${direction}`);
-        const data = await response.json();
+        const data = await response.json(); // Parse the JSON response
 
+        // Handle errors returned from the backend
         if (data.error) {
-          setStatus(data.error);
+          setStatus(data.error); // Display error message
           return;
         }
 
+        // If the route needs recalculation (user went off path)
         if (data.recalculate) {
-          instructions = data.instructions;
-          navPath = data.route;
-          routeIndex = 0;
-          speak(instructions[0]);
-          setStatus(`Next step: ${instructions[0]}`);
+          instructions = data.instructions; // Update instructions with the new route
+          navPath = data.route; // Update the navigation path
+          routeIndex = 0; // Reset instruction index
+          speak(instructions[0]); // Speak the first instruction of the new route
+          setStatus(`Next step: ${instructions[0]}`); // Update status
         } else {
-          routeIndex++;
+          routeIndex++; // Move to the next instruction
+
+          // Check if there are more instructions or if destination is reached
           if (routeIndex < instructions.length) {
-            speak(data.instructions);
-            setStatus(`Next step: ${data.instructions}`);
+            speak(data.instructions); // Speak the next instruction
+            setStatus(`Next step: ${data.instructions}`); // Update status
           } else {
-            speak("You have arrived at your destination.");
-            setStatus("Destination reached.");
+            speak("You have arrived at your destination."); // Announce arrival
+            setStatus("Destination reached."); // Update status
           }
         }
       }
