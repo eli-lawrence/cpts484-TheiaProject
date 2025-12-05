@@ -305,69 +305,67 @@
         const msg = "No response detected. Calling your emergency contact, " + emergencyContactName + " at " + emergencyContactPhone + ".";
 
         setStatus(msg); // update status
-        speak(msg); // Announce emergency call
+        speak(msg); // announce emergency call
       }
 
-      // Resets the application state after an emergency contact has been (simulated) called
+      // Resets application state after emergency contact has been (simulated) called
       function resetAfterCall() {
-        fallActive = false; // Deactivate fall detection
-        setStatus("Status cleared."); // Clear status message
-        setCountdown(""); // Clear countdown display
-        resetButtons(); // Hide all fall detection buttons
+        fallActive = false; // deactivate fall detection
+        setStatus("Status cleared."); // clear status message
+        setCountdown(""); // clear countdown display
+        resetButtons(); // hide all fall detection buttons
       }
 
-      // Initiates the general voice command listening for navigation or other commands
-      // Stores the current index in the navigation instructions array
+      // Initiates voice listening for commands
+      // Stores  index in the navigation instructions array
 
       async function startNav() {
-        setStatus("Listening for a voice command..."); // Update UI status
-        await speak("Listening"); // Wait for speech to finish to avoid self-triggering
+        setStatus("Listening for a voice command..."); // update UI status
+        await speak("Listening"); // wait for speech to finish
 
         try {
-          const transcript = await startVoiceInput(); // Capture voice input
-          handleVoiceCommand(transcript); // Process the command
+          const transcript = await startVoiceInput(); // capture voice input
+          handleVoiceCommand(transcript); // process command
         } catch (err) {
-          console.error(err); // Log any errors during voice input
-          setStatus("Sorry, I couldn't understand you. Please try again."); // Inform user
+          console.error(err); // log any errors during voice input
+          setStatus("Sorry, I couldn't understand you. Please try again.");
         }
       }
 
-      // Normalizes a given text command for easier processing (lowercase, trim whitespace)
+      // Standardize command for processing (lowercase, trim whitespace)
       function normalizeCommand(text) {
         return text.toLowerCase().trim();
       }
 
-      // Processes a transcribed voice command to execute specific actions
+      // Processes voice command to execute actions
       async function handleVoiceCommand(rawTranscript) {
-        const cmd = normalizeCommand(rawTranscript); // Normalize the raw transcript
-        console.log("Heard command:", cmd); // Log the heard command for debugging
+        const cmd = normalizeCommand(rawTranscript); // normalize raw transcript
+        console.log("Heard command:", cmd); // log command for debugging
 
-        // Use a switch statement to handle different voice commands
+        // Use a switch statement for different voice commands
         switch (true) {
           // Command to open settings page
           case cmd.includes("open settings"):
             setStatus("Opening settings...");
             speak("Opening settings.");
-            window.location.href = "{{ url_for('settings') }}"; // Redirect to settings page
+            window.location.href = "{{ url_for('settings') }}"; // go to settings page
             return;
 
-          // Commands to manually trigger fall detection
+          // Commands to trigger fall detection
           case cmd.includes("help ive fallen") ||
             cmd.includes("help i have fallen") ||
             cmd.includes("help") ||
             cmd.includes("fallen"):
             setStatus("Fall detected by voice command.");
-            startFallDetection(); // Start the fall detection sequence
+            startFallDetection(); // start the fall detection sequence
             return;
 
           // Commands to indicate the user is okay during fall detection
-          // Uses regex with word boundaries and excludes negative phrases to prevent false positives
           case (/\b(yes|ok|okay)\b/.test(cmd) && !cmd.includes("not okay") && !cmd.includes("not ok")):
             if (fallActive) {
               setStatus("User said they are okay.");
-              markUserOkay(); // Mark user as okay and clear fall state
+              markUserOkay(); // user is okay
             } else {
-              // If no active fall, acknowledge the command but inform user
               setStatus(
                 "I heard 'yes I'm okay', but no active fall was detected."
               );
@@ -375,10 +373,10 @@
             }
             return;
 
-          // Command to navigate to a specific room (e.g., "Room 103")
+          // Command to navigate to room
           case cmd.startsWith("room"): {
-            let dest = "Room " + cmd.replace(/^room\s+/, "").trim(); // Extract room number
-            await navigateToDestination(dest); // Initiate navigation to the extracted destination
+            let dest = "Room " + cmd.replace(/^room\s+/, "").trim(); // extract room number
+            await navigateToDestination(dest); // initiate navigation to destination
             return;
           }
 
@@ -389,7 +387,7 @@
             };
             let hallwayIdentifier = cmd.replace(/^hallway\s+/, "").trim();
 
-            // Convert spelled-out numbers to digits if necessary
+            // convert spelled-out numbers to digits
             if (numberWords[hallwayIdentifier]) {
               hallwayIdentifier = numberWords[hallwayIdentifier];
             }
@@ -398,37 +396,36 @@
             return;
           }
 
-          // ----- FALLBACK -----
-          // If no specific command is matched, treat the transcript as a navigation destination
+          // If no command is matched, treat transcript as destination
           default:
             await navigateToDestination(rawTranscript);
             return;
         }
       }
 
-      // Handles the navigation process to a specified destination
+      // Handles the navigation process to destination
       async function navigateToDestination(destination1) {
-        let destination = normalizeCommand(destination1); // Normalize the destination input
+        let destination = normalizeCommand(destination1); // standardize the destination input
 
-        // Capitalize the first letter of the destination for consistent naming (e.g., "room 103" -> "Room 103")
+        // standardize capitalization
         destination =
           destination.charAt(0).toUpperCase() + destination.slice(1);
 
         try {
-          // Send the transcribed destination to the backend for logging (speechtotext endpoint)
+          // Send the destination to the backend for logging
           await fetch(
             `/speechtotext?transcript=${encodeURIComponent(destination)}`
           );
 
-          // Request navigation instructions from the backend (navigate endpoint)
+          // Request navigation instructions from the backend
           const response = await fetch(
             `/navigate?destination=${encodeURIComponent(destination)}`
           );
-          const data = await response.json(); // Parse the JSON response
+          const data = await response.json();
 
-          navPath = data.route; // Store the full navigation path
-          instructions = data.instructions; // Store the voice instructions
-          routeIndex = 0; // Reset instruction index
+          navPath = data.route; // store full navigation path
+          instructions = data.instructions; // store voice instructions
+          routeIndex = 0; // reset instruction index
 
           // Speak the first instruction or indicate no instructions are available
           if (instructions.length > 0) {
@@ -438,12 +435,12 @@
             setStatus("No instructions available.");
           }
         } catch (err) {
-          console.error(err); // Log any errors during navigation
-          setStatus("Error fetching navigation."); // Inform user of error
+          console.error(err); // log errors during navigation
+          setStatus("Error fetching navigation."); // inform user of error
         }
       }
 
-      // Captures voice input using the Web Speech API
+      // Captures voice input
       async function startVoiceInput() {
         return new Promise((resolve, reject) => {
           const recognition = new webkitSpeechRecognition();
@@ -468,36 +465,35 @@
         });
       }
 
-      // Handles manual movement actions (forward, back, left, right)
+      // Handles manual movement
       async function move(direction) {
         setStatus(`Moving ${direction}...`); // Update status message
-        // Send movement direction to the backend (move endpoint)
         const response = await fetch(`/move?direction=${direction}`);
-        const data = await response.json(); // Parse the JSON response
+        const data = await response.json();
 
-        // Handle errors returned from the backend
+        // Handle errors
         if (data.error) {
-          setStatus(data.error); // Display error message
+          setStatus(data.error); // display error message
           return;
         }
 
         // If the route needs recalculation (user went off path)
         if (data.recalculate) {
-          instructions = data.instructions; // Update instructions with the new route
-          navPath = data.route; // Update the navigation path
-          routeIndex = 0; // Reset instruction index
-          speak(instructions[0]); // Speak the first instruction of the new route
-          setStatus(`Next step: ${instructions[0]}`); // Update status
+          instructions = data.instructions; // update instructions to new route
+          navPath = data.route; // update navigation path
+          routeIndex = 0; // reset instruction index
+          speak(instructions[0]); // speak the first instruction of the new route
+          setStatus(`Next step: ${instructions[0]}`);
         } else {
-          routeIndex++; // Move to the next instruction
+          routeIndex++; // move to the next instruction
 
-          // Check if there are more instructions or if destination is reached
+          // check for anymore instructions or if destination is reached
           if (routeIndex < instructions.length) {
-            speak(data.instructions); // Speak the next instruction
-            setStatus(`Next step: ${data.instructions}`); // Update status
+            speak(data.instructions); // next instruction
+            setStatus(`Next step: ${data.instructions}`); // update status
           } else {
-            speak("You have arrived at your destination."); // Announce arrival
-            setStatus("Destination reached."); // Update status
+            speak("You have arrived at your destination.");
+            setStatus("Destination reached."); // update status
           }
         }
       }
