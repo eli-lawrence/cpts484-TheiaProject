@@ -24,10 +24,21 @@ nav_info = {
 def index():
     return render_template("index.html", settings_data=settings_data)
 
+@app.route("/speechtotext")
+def speechtotext():
+    transcript = request.args.get("transcript", "")
+    print("Received transcript:", transcript)
+
+    nav_info["last_transcript"] = transcript
+
+    return {"transcript": transcript}
+
 @app.route("/navigate")
 def navigate():
     start = request.args.get("start", nav_info["current_location"]) #sets the start location
-    dest = request.args.get("destination", "Room 103") #gets the inputted destination (or defaults to Room 103)
+    dest = request.args.get("destination",nav_info.get("last_transcript", "Room 103")) #gets the inputted destination (or defaults to Room 103)
+    if dest: 
+        dest = dest[0].upper() + dest[1:]
 
     distance, path = dijkstra_nav(building_map[start], building_map[dest]) #finds the shortest path
     route_script = voice_navigation(path) #makes the route script for TTS
@@ -36,6 +47,7 @@ def navigate():
     nav_info["destination"] = dest
     nav_info["route"] = [n.name for n in path]
     nav_info["instructions"] = route_script
+    nav_info["routeIndex"] = 0
 
     #returns relevant nav data to begin route
     return {
