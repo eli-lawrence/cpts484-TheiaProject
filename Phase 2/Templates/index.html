@@ -255,13 +255,81 @@
       let instructions = [];
       let routeIndex = 0;
 
-      async function startNav(placeToGo) {
-        let destination = await startVoiceInput();
+      async function startNav() {
+        setStatus("Listening for a voice command...");
+        speak("Listening");
+
+        try {
+          const transcript = await startVoiceInput();
+          handleVoiceCommand(transcript);
+        } catch (err) {
+          console.error(err);
+          setStatus("Sorry, I couldn't understand you. Please try again.");
+        }
+      }
+
+      function normalizeCommand(text) {
+        return text.toLowerCase().trim();
+      }
+
+      async function handleVoiceCommand(rawTranscript) {
+        const cmd = normalizeCommand(rawTranscript);
+        console.log("Heard command:", cmd);
+
+        switch (true) {
+          case cmd.includes("open settings"):
+            setStatus("Opening settings...");
+            speak("Opening settings.");
+            window.location.href = "{{ url_for('settings') }}";
+            return;
+
+          case cmd.includes("help ive fallen") ||
+            cmd.includes("help i have fallen") ||
+            cmd.includes("help") ||
+            cmd.includes("fallen"):
+            setStatus("Fall detected by voice command.");
+            speak("I heard that you need help. Starting fall detection.");
+            startFallDetection();
+            return;
+
+          case cmd.includes("yes") ||
+            cmd.includes("okay") ||
+            cmd.includes("ok"):
+            if (fallActive) {
+              setStatus("User said they are okay.");
+              markUserOkay();
+            } else {
+              setStatus(
+                "I heard 'yes I'm okay', but no active fall was detected."
+              );
+              speak("Okay, thank you.");
+            }
+            return;
+
+          case cmd.startsWith("room"): {
+            let dest = "Room " + cmd.replace(/^room\s+/, "").trim();
+            await navigateToDestination(dest);
+            return;
+          }
+
+          // ----- FALLBACK -----
+          default:
+            await navigateToDestination(rawTranscript);
+            return;
+        }
+      }
+
+      async function navigateToDestination(destination1) {
+        let destination = normalizeCommand(destination1);
 
         destination =
           destination.charAt(0).toUpperCase() + destination.slice(1);
 
         try {
+          await fetch(
+            `/speechtotext?transcript=${encodeURIComponent(destination)}`
+          );
+
           const response = await fetch(
             `/navigate?destination=${encodeURIComponent(destination)}`
           );
@@ -291,14 +359,17 @@
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
 
-          recognition.onresult = (event) => {
+          recognition.onresult = async (event) => {
             const transcript = event.results[0][0].transcript;
+
+            await fetch(
+              `/speechtotext?transcript=${encodeURIComponent(transcript)}`
+            );
+
             resolve(transcript);
           };
 
-          recognition.onerror = (err) => {
-            reject(err);
-          };
+          recognition.onerror = (err) => reject(err);
 
           recognition.start();
         });
