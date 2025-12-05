@@ -184,13 +184,25 @@
         }
 
         fallActive = true;
-        secondsLeft = 10;
+        secondsLeft = 20;
 
         showDuringCountdownButtons();
         setStatus("I detected a possible fall. Are you okay?");
         setCountdown("Respond within: " + secondsLeft + " s");
 
         speak("I detected a fall. Are you okay?");
+        console.log("here");
+        setTimeout(async () => {
+          try {
+            if (!fallActive) return;
+            console.log("here2");
+            const transcript = await startVoiceInput();
+
+            await handleVoiceCommand(transcript);
+          } catch (err) {
+            console.error("Voice check during fall failed:", err);
+          }
+        }, 2000);
 
         if (countdownTimer) {
           clearInterval(countdownTimer);
