@@ -56,6 +56,14 @@
     </p>
 
     <form method="post">
+        <label for="user_name">User Name</label>
+      <input id="user_name" name="user_name"
+             value="{{ settings_data['user_name'] }}">
+
+        <label for="age">User Age</label>
+      <input id="age" name="age"
+             value="{{ settings_data['age'] }}">
+
       <label for="emergency_contact_name">Emergency Contact Name</label>
       <input id="emergency_contact_name" name="emergency_contact_name"
              value="{{ settings_data['emergency_contact_name'] }}">

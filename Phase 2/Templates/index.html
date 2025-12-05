@@ -157,6 +157,7 @@
     <script>
         const emergencyContactName = "{{ settings_data['emergency_contact_name'] }}";
         const emergencyContactPhone = "{{ settings_data['emergency_contact_phone'] }}";
+        const userName = "{{ settings_data['user_name'] }}";
 
       // Function to synthesize speech from text
       // Returns a Promise that resolves when the speech finishes
@@ -235,13 +236,13 @@
         secondsLeft = 20; // Initialize countdown timer to 20 seconds
 
         showDuringCountdownButtons(); // Show appropriate buttons for the countdown phase
-        setStatus("I detected a possible fall. Are you okay?"); // Update status message
+        setStatus("I detected a possible fall. Are you okay " + userName + "?"); // Update status message
         setCountdown("Respond within: " + secondsLeft + " s"); // Display countdown
 
         // Announce fall detection via speech and wait for it to finish
         // This is CRITICAL: waiting prevents the app from hearing its own "Are you OK?" prompt
         // and falsely triggering the "OK" response.
-        speak("I detected a fall. Are you okay?").then(() => {
+        speak("I detected a possible fall. Are you okay " + userName + "?").then(() => {
            listenDuringFall();
         });
 

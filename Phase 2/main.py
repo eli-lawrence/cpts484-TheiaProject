@@ -4,6 +4,8 @@ from navigation import build_map, dijkstra_nav, voice_navigation
 app = Flask(__name__)
 
 settings_data = {
+    "user_name": "John",
+    "age": "22",
     "emergency_contact_name": "Alex",
     "emergency_contact_phone": "555-123-4567",
     "preferred_voice": "Default",
@@ -121,6 +123,8 @@ def move():
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     if request.method == "POST":
+        settings_data["user_name"] = request.form["user_name"]
+        settings_data["age"] = request.form["age"]
         settings_data["emergency_contact_name"] = request.form["emergency_contact_name"]
         settings_data["emergency_contact_phone"] = request.form["emergency_contact_phone"]
         settings_data["language"] = request.form["language"]
