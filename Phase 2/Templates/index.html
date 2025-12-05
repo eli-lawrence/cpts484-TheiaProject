@@ -74,7 +74,7 @@
       </p>
 
       <div class="card">
-        <h2>Start Navigation</h2>
+        <h2>Voice Command</h2>
         <button class="btn btn-primary" onclick="startNav()">
           Start Voice Command
         </button>
@@ -83,7 +83,6 @@
 
       <div class="card">
         <h2>Manual Movement</h2>
-        <p>Press a button to indicate the direction you moved:</p>
 
         <div
           style="
@@ -156,9 +155,8 @@
     </div>
 
     <script>
-
-      
-
+        const emergencyContactName = "{{ settings_data['emergency_contact_name'] }}";
+        const emergencyContactPhone = "{{ settings_data['emergency_contact_phone'] }}";
 
       // Function to synthesize speech from text
       // Returns a Promise that resolves when the speech finishes
@@ -303,8 +301,10 @@
       function triggerEmergencyContact() {
         setCountdown(""); // clear countdown display
         showAfterCallButtons(); // show button for resetting after call
-        setStatus("No response detected. Calling emergency contact."); // update status
-        speak("No response detected. Calling your emergency contact."); // Announce emergency call
+        const msg = "No response detected. Calling your emergency contact, " + emergencyContactName + " at " + emergencyContactPhone + ".";
+
+        setStatus(msg); // update status
+        speak(msg); // Announce emergency call
       }
 
       // Resets the application state after an emergency contact has been (simulated) called
