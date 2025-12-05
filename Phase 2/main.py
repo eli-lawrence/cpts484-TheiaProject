@@ -39,6 +39,7 @@ def navigate():
     dest = request.args.get("destination",nav_info.get("last_transcript", "Room 103")) #gets the inputted destination (or defaults to Room 103)
     if dest: 
         dest = dest[0].upper() + dest[1:]
+        dest = dest.rstrip('.,?!') # cleans up destination string
 
     distance, path = dijkstra_nav(building_map[start], building_map[dest]) #finds the shortest path
     route_script = voice_navigation(path) #makes the route script for TTS
