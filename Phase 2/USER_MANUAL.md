@@ -31,7 +31,7 @@ Once a destination is set, the app will read out the first instruction (e.g., "G
 
 ## 3. Manual Navigation Controls
 
-If you are testing without voice or need to correct your location manually, you can use the **Manual Movement** buttons.
+The manual location controls are meant to simulate the app detecting a change in your GPS location.
 
 *   **Forward / Back / Left / Right**: Press these buttons to move your virtual location in the app.
 *   **Recalculation**: If you move off the planned path (e.g., turn wrong), the app will automatically recalculate the route and read the new instructions.
@@ -59,13 +59,15 @@ The application includes a fall detection system that can be triggered manually 
     *   It announces: *"No response detected. Calling your emergency contact."*
 
 ### Resetting After an Emergency Call
-After an emergency call is simulated, a **"Person is OK Now"** button will appear. Click this to reset the system and return to normal operation.
+After an emergency call is simulated, a **"Person is OK Now"** button will appear. Click this to reset the system and return to normal operation. You may also respond with verbal command saying that they are okay.
 
 ## 5. Companion Settings
 
 You can customize the application to fit your needs. Click the **"Companion Settings"** link at the top of the home page or say "Open settings".
 
 ### Configurable Options
+*   **User Name:** The name of the person using the app.
+*   **Age:** The age of the person using the app.
 *   **Emergency Contact Name:** The name of the person to contact in an emergency.
 *   **Emergency Contact Phone:** The phone number to dial.
 *   **Language:** Choose between English (US) and English (UK).
