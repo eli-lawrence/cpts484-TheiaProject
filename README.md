@@ -52,3 +52,4 @@ The Theia Project is a web-based application designed to assist visually impaire
 *   `Phase 2/navigation.py`: Contains the core navigation logic, including the Dijkstra algorithm for finding the shortest path and building the map.
 *   `Phase 2/Templates/index.html`: The main user interface of the application. It includes controls for starting navigation, manual movement, and simulating fall detection.
 *   `Phase 2/Templates/settings.html`: The settings page where users can configure their preferences.
+*   `Phase 2/Documents/`: Contains all the Phase II documentation.
